@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:int-amqp="http://www.springframework.org/schema/integration/amqp"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+                    http://www.springframework.org/schema/beans/spring-beans.xsd
+                    http://www.springframework.org/schema/integration
+                    http://www.springframework.org/schema/integration/spring-integration.xsd
+                    http://www.springframework.org/schema/task
+                    http://www.springframework.org/schema/task/spring-task.xsd
+                    http://www.springframework.org/schema/integration/amqp
+    				http://www.springframework.org/schema/integration/amqp/spring-integration-amqp.xsd
+                    http://www.springframework.org/schema/batch
+	                http://www.springframework.org/schema/batch/spring-batch-2.1.xsd">
+
+	<!-- Command to execute this job.  From the target directory of this project:
+		java -jar copy-file-0.0.1-SNAPSHOT.jar jobs/vulnScanner.xml vulnScannerJob ipAddress=<IPADDRESS_OR_DOMAIN> outputFile=<LOCATION_OF_OUTPUT>
+	-->
+
+	<job id="vulnScannerSingleJob" xmlns="http://www.springframework.org/schema/batch">
+		<step id="singleLoadPorts" next="singleScanPorts">
+			<tasklet ref="loadPortsTasklet" />
+		</step>
+
+		<step id="singleScanPorts" next="singleGenerateResults">
+			<tasklet>
+				<chunk reader="targetItemReader" processor="targetProcessor" writer="targetWriter" commit-interval="100"/>
+			</tasklet>
+		</step>
+
+		<step id="singleGenerateResults">
+			<tasklet>
+				<chunk reader="exportItemReader" writer="xmlOutputWriter" commit-interval="10"/>
+			</tasklet>
+		</step>
+	</job>
+
+	<job id="vulnScannerJob" xmlns="http://www.springframework.org/schema/batch">
+		<step id="loadPorts" next="masterScanPorts">
+			<tasklet ref="loadPortsTasklet" />
+		</step>
+
+		<step id="masterScanPorts" next="generateResults">
+			<partition partitioner="partitioner" handler="partitionHandler"/>
+		</step>
+
+		<step id="generateResults">
+			<tasklet>
+				<chunk reader="exportItemReader" writer="xmlOutputWriter" commit-interval="10"/>
+			</tasklet>
+		</step>
+	</job>
+
+	<bean id="partitionHandler" class="org.springframework.batch.integration.partition.MessageChannelPartitionHandler">
+		<property name="stepName" value="scanPorts"/>
+		<property name="gridSize" value="3"/>
+		<property name="messagingOperations">
+			<bean class="org.springframework.integration.core.MessagingTemplate">
+				<property name="defaultChannel" ref="outboundRequests"/>
+				<property name="receiveTimeout" value="100000"/>
+			</bean>
+		</property>
+	</bean>
+
+	<bean id="partitioner" class="com.michaelminella.springbatch.partition.ColumnRangePartitioner">
+		<property name="dataSource" ref="dataSource"/>
+		<property name="column" value="id"/>
+		<property name="table" value="target"/>
+	</bean>
+
+	<channel id="outboundRequests" xmlns="http://www.springframework.org/schema/integration">
+	    <dispatcher task-executor="taskExecutor"/>
+	</channel>
+
+	<int-amqp:outbound-gateway request-channel="outboundRequests" reply-channel="inboundStaging" amqp-template="amqpRequestsTemplate" mapped-request-headers="correlationId, sequenceNumber, sequenceSize" mapped-reply-headers="correlationId, sequenceNumber, sequenceSize"/>
+
+	<int-amqp:inbound-gateway request-channel="inboundRequests" reply-channel="outboundStaging" queue-names="vuln.requests" connection-factory="amqpConnectionFactory" mapped-request-headers="correlationId, sequenceNumber, sequenceSize" mapped-reply-headers="correlationId, sequenceNumber, sequenceSize"/>
+
+	<channel id="inboundRequests" xmlns="http://www.springframework.org/schema/integration"/>
+
+	<channel id="outboundStaging" xmlns="http://www.springframework.org/schema/integration"/>
+
+	<channel id="inboundStaging" xmlns="http://www.springframework.org/schema/integration"/>
+
+	<bean id="amqpConnectionFactory" class="org.springframework.amqp.rabbit.connection.CachingConnectionFactory">
+		<property name="port" value="5672"/>
+		<property name="username" value="guest"/>
+		<property name="password" value="guest"/>
+	</bean>
+
+	<bean id="amqpRequestsTemplate" class="org.springframework.amqp.rabbit.core.RabbitTemplate">
+		<property name="connectionFactory" ref="amqpConnectionFactory"/>
+		<property name="routingKey" value="vuln.requests"/>
+		<property name="queue" value="vuln.requests"/>
+	</bean>
+
+	<bean id="amqpResponsesTemplate" class="org.springframework.amqp.rabbit.core.RabbitTemplate">
+		<property name="connectionFactory" ref="amqpConnectionFactory"/>
+		<property name="routingKey" value="vuln.requests"/>
+		<property name="queue" value="vuln.requests"/>
+	</bean>
+
+	<task:executor id="taskExecutor" pool-size="3"/>
+
+	<service-activator ref="stepExecutionRequestHandler" input-channel="inboundRequests" output-channel="outboundStaging" xmlns="http://www.springframework.org/schema/integration"/>
+
+	<aggregator ref="partitionHandler" send-partial-result-on-expiry="true" send-timeout="10000" input-channel="inboundStaging" xmlns="http://www.springframework.org/schema/integration"/>
+
+	<bean id="stepExecutionRequestHandler" class="org.springframework.batch.integration.partition.StepExecutionRequestHandler">
+		<property name="jobExplorer" ref="jobExplorer"/>
+		<property name="stepLocator" ref="stepLocator"/>
+	</bean>
+
+	<bean id="stepLocator" class="org.springframework.batch.integration.partition.BeanFactoryStepLocator"/>
+
+	<step id="scanPorts" xmlns="http://www.springframework.org/schema/batch">
+		<tasklet>
+			<chunk reader="targetItemReader" processor="targetProcessor" writer="targetWriter" commit-interval="2000"/>
+		</tasklet>
+	</step>
+
+	<bean id="loadPortsTasklet" class="com.michaelminella.springbatch.tasklet.LoadPortsTasklet" scope="step">
+		<property name="fullPortScan" value="true"/>
+		<property name="ipAddress" value="#{jobParameters[ipAddress]}"/>
+		<property name="sessionFactory" ref="sessionFactory"/>
+	</bean>
+
+    <bean id="exportItemReader"
+        class="org.springframework.batch.item.database.HibernateCursorItemReader" scope="step">
+		<property name="sessionFactory" ref="sessionFactory"/>
+		<property name="queryString" value="from Target where connected is true"/>
+    </bean>
+
+	<bean id="outputFile" class="org.springframework.core.io.FileSystemResource" scope="step">
+		<constructor-arg value="#{jobParameters[outputFile]}"/>
+	</bean>
+
+	<bean id="xmlOutputWriter" class="org.springframework.batch.item.xml.StaxEventItemWriter">
+    	<property name="resource" ref="outputFile" />
+    	<property name="marshaller" ref="targetMashaller" />
+    	<property name="rootTagName" value="openTargets" />
+	</bean>
+
+	<bean id="targetMashaller" class="org.springframework.oxm.xstream.XStreamMarshaller">
+	    <property name="aliases">
+	        <map>
+	            <entry key="target" value="com.michaelminella.springbatch.domain.Target" />
+	        </map>
+	    </property>
+	</bean>
+
+    <bean id="targetItemReader"
+        class="org.springframework.batch.item.database.HibernateCursorItemReader" scope="step">
+		<property name="sessionFactory" ref="sessionFactory"/>
+		<property name="queryString" value="from Target where ip = :ipAddress"/>
+		<property name="parameterValues">
+			<map>
+				<entry key="ipAddress" value="#{jobParameters[ipAddress]}"/>
+			</map>
+		</property>
+    </bean>
+
+	<bean id="targetWriter" class="org.springframework.batch.item.database.HibernateItemWriter">
+		<property name="sessionFactory" ref="sessionFactory"/>
+	</bean>
+
+	<bean id="targetProcessor" class="com.michaelminella.springbatch.processor.TargetScanItemProcessor"/>
+
+	<bean id="jobRepository" class="org.springframework.batch.core.repository.support.MapJobRepositoryFactoryBean"/>
+
+	<bean id="jobExplorer" class="org.springframework.batch.core.explore.support.MapJobExplorerFactoryBean">
+		<property name="repositoryFactory" ref="&amp;jobRepository"/>
+	</bean>
+
+    <bean id="sessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">
+	    <property name="dataSource" ref="dataSource" />
+	    <property name="configLocation">
+	    	<value>classpath:hibernate.cfg.xml</value>
+	    </property>
+	    <property name="configurationClass">
+	    	<value>org.hibernate.cfg.AnnotationConfiguration</value>
+	    </property>
+	    <property name="hibernateProperties">
+	    	<props><!--
+	    		<prop key="hibernate.show_sql">true</prop>
+	    		<prop key="hibernate.format_sql">true</prop>
+				--><prop key="hibernate.dialect">org.hibernate.dialect.HSQLDialect</prop>
+				<prop key="hibernate.hbm2ddl.auto">create</prop>
+	    	</props>
+	    </property>
+	</bean>
+
+	<bean id="jobLauncher"
+		class="org.springframework.batch.core.launch.support.SimpleJobLauncher">
+		<property name="jobRepository" ref="jobRepository" />
+	</bean>
+
+	<bean id="transactionManager" class="org.springframework.batch.support.transaction.ResourcelessTransactionManager"/>
+
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource">
+		<property name="driverClassName" value="${batch.jdbc.driver}" />
+		<property name="url" value="${batch.jdbc.url}" />
+		<property name="username" value="${batch.jdbc.user}" />
+		<property name="password" value="${batch.jdbc.password}" />
+	</bean>
+
+	<bean id="placeholderProperties" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="location" value="classpath:batch.properties" />
+		<property name="systemPropertiesModeName" value="SYSTEM_PROPERTIES_MODE_OVERRIDE" />
+		<property name="ignoreUnresolvablePlaceholders" value="true" />
+		<property name="order" value="1" />
+	</bean>
+</beans>
