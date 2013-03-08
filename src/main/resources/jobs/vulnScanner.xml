@@ -4,6 +4,7 @@
 	xmlns:int="http://www.springframework.org/schema/integration"
 	xmlns:task="http://www.springframework.org/schema/task"
 	xmlns:int-amqp="http://www.springframework.org/schema/integration/amqp"
+	xmlns:rabbit="http://www.springframework.org/schema/rabbit"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans
                     http://www.springframework.org/schema/beans/spring-beans.xsd
                     http://www.springframework.org/schema/integration
@@ -12,6 +13,8 @@
                     http://www.springframework.org/schema/task/spring-task.xsd
                     http://www.springframework.org/schema/integration/amqp
     				http://www.springframework.org/schema/integration/amqp/spring-integration-amqp.xsd
+    				http://www.springframework.org/schema/rabbit
+                    http://www.springframework.org/schema/rabbit/spring-rabbit-1.1.xsd
                     http://www.springframework.org/schema/batch
 	                http://www.springframework.org/schema/batch/spring-batch-2.1.xsd">
 
@@ -74,9 +77,9 @@
 	    <dispatcher task-executor="taskExecutor"/>
 	</channel>
 
-	<int-amqp:outbound-gateway request-channel="outboundRequests" reply-channel="inboundStaging" amqp-template="amqpRequestsTemplate" mapped-request-headers="correlationId, sequenceNumber, sequenceSize" mapped-reply-headers="correlationId, sequenceNumber, sequenceSize"/>
+	<int-amqp:outbound-gateway request-channel="outboundRequests" reply-channel="inboundStaging" amqp-template="amqpTemplate" mapped-request-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS" mapped-reply-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS"/>
 
-	<int-amqp:inbound-gateway request-channel="inboundRequests" reply-channel="outboundStaging" queue-names="vuln.requests" connection-factory="amqpConnectionFactory" mapped-request-headers="correlationId, sequenceNumber, sequenceSize" mapped-reply-headers="correlationId, sequenceNumber, sequenceSize"/>
+	<int-amqp:inbound-gateway request-channel="inboundRequests" reply-channel="outboundStaging" queue-names="vuln.requests" connection-factory="amqpConnectionFactory" mapped-request-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS" mapped-reply-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS"/>
 
 	<channel id="inboundRequests" xmlns="http://www.springframework.org/schema/integration"/>
 
@@ -90,6 +93,20 @@
 		<property name="password" value="guest"/>
 	</bean>
 
+	<rabbit:template id="amqpTemplate"
+		connection-factory="amqpConnectionFactory"
+		routing-key="vuln.requests"
+		reply-timeout="60000"
+		reply-queue="vuln.replies">
+		<rabbit:reply-listener/>
+	</rabbit:template>
+
+	<rabbit:admin connection-factory="amqpConnectionFactory"/>
+
+	<rabbit:queue name="vuln.replies" />
+
+	<rabbit:queue name="vuln.requests" /><!--
+
 	<bean id="amqpRequestsTemplate" class="org.springframework.amqp.rabbit.core.RabbitTemplate">
 		<property name="connectionFactory" ref="amqpConnectionFactory"/>
 		<property name="routingKey" value="vuln.requests"/>
@@ -97,13 +114,7 @@
 		<property name="replyTimeout" value="60000"/>
 	</bean>
 
-	<bean id="amqpResponsesTemplate" class="org.springframework.amqp.rabbit.core.RabbitTemplate">
-		<property name="connectionFactory" ref="amqpConnectionFactory"/>
-		<property name="routingKey" value="vuln.requests"/>
-		<property name="queue" value="vuln.requests"/>
-	</bean>
-
-	<task:executor id="taskExecutor" pool-size="3"/>
+	--><task:executor id="taskExecutor" pool-size="3"/>
 
 	<service-activator ref="stepExecutionRequestHandler" input-channel="inboundRequests" output-channel="outboundStaging" xmlns="http://www.springframework.org/schema/integration"/>
 

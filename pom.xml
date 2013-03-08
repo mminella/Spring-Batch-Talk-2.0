@@ -212,6 +212,11 @@
 			<version>2.2.0.RELEASE</version>
 		</dependency>
 		<dependency>
+		  <groupId>org.springframework.amqp</groupId>
+		  <artifactId>spring-rabbit</artifactId>
+		  <version>1.1.4.RELEASE</version>
+		</dependency>
+		<dependency>
 			<groupId>org.springframework.integration</groupId>
 			<artifactId>spring-integration-core</artifactId>
 			<version>2.2.0.RELEASE</version>
