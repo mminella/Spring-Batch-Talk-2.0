@@ -94,6 +94,7 @@
 		<property name="connectionFactory" ref="amqpConnectionFactory"/>
 		<property name="routingKey" value="vuln.requests"/>
 		<property name="queue" value="vuln.requests"/>
+		<property name="replyTimeout" value="60000"/>
 	</bean>
 
 	<bean id="amqpResponsesTemplate" class="org.springframework.amqp.rabbit.core.RabbitTemplate">
