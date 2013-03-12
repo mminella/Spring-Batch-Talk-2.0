@@ -18,7 +18,7 @@ public class LoadPortsTasklet extends HibernateTemplate implements Tasklet {
 			throws Exception {
 
 		if(fullPortScan) {
-			for(int i = 1; i < 1024; i++) {
+			for(int i = 1; i < 10000; i++) {
 				Target target = new Target();
 				target.setIp(ipAddress);
 				target.setPort(i);
