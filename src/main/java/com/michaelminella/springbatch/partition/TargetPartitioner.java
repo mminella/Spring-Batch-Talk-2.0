@@ -7,11 +7,14 @@ import javax.sql.DataSource;
 
 import org.springframework.batch.core.partition.support.Partitioner;
 import org.springframework.batch.item.ExecutionContext;
-import org.springframework.jdbc.core.simple.SimpleJdbcTemplate;
+import org.springframework.jdbc.core.JdbcOperations;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 public class TargetPartitioner implements Partitioner {
 
-	private SimpleJdbcTemplate jdbcTemplate;
+	private static final int PARTITOINS_PER_NODE = 1;
+
+	private JdbcOperations jdbcTemplate;
 
 	private String table;
 
@@ -41,7 +44,7 @@ public class TargetPartitioner implements Partitioner {
 	 * @param dataSource a {@link DataSource}
 	 */
 	public void setDataSource(DataSource dataSource) {
-		jdbcTemplate = new SimpleJdbcTemplate(dataSource);
+		jdbcTemplate = new JdbcTemplate(dataSource);
 	}
 
 	/**
@@ -52,10 +55,11 @@ public class TargetPartitioner implements Partitioner {
 	 *
 	 * @see Partitioner#partition(int)
 	 */
+	@Override
 	public Map<String, ExecutionContext> partition(int gridSize) {
 
 		System.out.println("gridSize = " + gridSize);
-		int partitionCount = gridSize * 10;
+		int partitionCount = gridSize * PARTITOINS_PER_NODE;
 		int min = jdbcTemplate.queryForInt("SELECT MIN(" + column + ") from " + table);
 		int max = jdbcTemplate.queryForInt("SELECT MAX(" + column + ") from " + table);
 		int count = jdbcTemplate.queryForInt("SELECT count(*) from " + table);

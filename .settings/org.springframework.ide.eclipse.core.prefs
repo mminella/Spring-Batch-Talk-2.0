@@ -1,0 +1,18 @@
+#Tue Mar 12 11:32:24 CDT 2013
+eclipse.preferences.version=1
+org.springframework.ide.eclipse.core.builders.enable.osgibundleupdater=false
+org.springframework.ide.eclipse.core.enable.project.preferences=false
+org.springframework.ide.eclipse.core.validator.enable.com.springsource.server.ide.manifest.core.manifestvalidator=false
+org.springframework.ide.eclipse.core.validator.enable.org.springframework.ide.eclipse.core.springvalidator=false
+org.springframework.ide.eclipse.core.validator.rule.enable.com.springsource.server.ide.manifest.core.applicationSymbolicNameRule-com.springsource.server.ide.manifest.core.manifestvalidator=false
+org.springframework.ide.eclipse.core.validator.rule.enable.com.springsource.server.ide.manifest.core.applicationVersionRule-com.springsource.server.ide.manifest.core.manifestvalidator=false
+org.springframework.ide.eclipse.core.validator.rule.enable.com.springsource.server.ide.manifest.core.bundleActivationPolicyRule-com.springsource.server.ide.manifest.core.manifestvalidator=false
+org.springframework.ide.eclipse.core.validator.rule.enable.com.springsource.server.ide.manifest.core.bundleActivatorRule-com.springsource.server.ide.manifest.core.manifestvalidator=false
+org.springframework.ide.eclipse.core.validator.rule.enable.com.springsource.server.ide.manifest.core.bundleManifestVersionRule-com.springsource.server.ide.manifest.core.manifestvalidator=false
+org.springframework.ide.eclipse.core.validator.rule.enable.com.springsource.server.ide.manifest.core.bundleSymbolicNameRule-com.springsource.server.ide.manifest.core.manifestvalidator=false
+org.springframework.ide.eclipse.core.validator.rule.enable.com.springsource.server.ide.manifest.core.bundleVersionRule-com.springsource.server.ide.manifest.core.manifestvalidator=false
+org.springframework.ide.eclipse.core.validator.rule.enable.com.springsource.server.ide.manifest.core.exportPackageRule-com.springsource.server.ide.manifest.core.manifestvalidator=false
+org.springframework.ide.eclipse.core.validator.rule.enable.com.springsource.server.ide.manifest.core.importRule-com.springsource.server.ide.manifest.core.manifestvalidator=false
+org.springframework.ide.eclipse.core.validator.rule.enable.com.springsource.server.ide.manifest.core.parsingProblemsRule-com.springsource.server.ide.manifest.core.manifestvalidator=false
+org.springframework.ide.eclipse.core.validator.rule.enable.com.springsource.server.ide.manifest.core.requireBundleRule-com.springsource.server.ide.manifest.core.manifestvalidator=false
+org.springframework.ide.eclipse.core.validator.rule.enable.org.springframework.ide.eclipse.core.springClasspath-org.springframework.ide.eclipse.core.springvalidator=false

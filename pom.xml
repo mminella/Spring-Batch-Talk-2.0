@@ -206,8 +206,37 @@
 					<warName>partitioningJobs</warName>
 				</configuration>
 			</plugin>
+			<plugin>
+			    <groupId>org.cloudfoundry</groupId>
+			    <artifactId>cf-maven-plugin</artifactId>
+			    <version>1.0.0.M4</version>
+			    <configuration>
+			    	<server>cloudfoundry</server>
+			      	<target>http://api.cloudfoundry.com</target>
+			     	<path>${project.build.directory}/partitioningJobs.war</path>
+	              	<memory>512</memory>
+	             	<noStart>true</noStart>
+		          	<services>
+						<service>
+							<name>mysql-p</name>
+							<vendor>mysql</vendor>
+						</service>
+						<service>
+							<name>rabbitmq-p</name>
+							<vendor>rabbitmq</vendor>
+						</service>
+	            	</services>
+ 			    </configuration>
+			</plugin>
 		</plugins>
 	</build>
+	<pluginRepositories>
+	    <pluginRepository>
+	        <id>repository.springframework.maven.milestone</id>
+	        <name>Spring Framework Maven Milestone Repository</name>
+	        <url>http://maven.springframework.org/milestone</url>
+	    </pluginRepository>
+	</pluginRepositories>
 	<repositories>
 		<repository>
 			<id>spring-milestones</id>

@@ -2,6 +2,7 @@ package com.michaelminella.springbatch.processor;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -36,6 +37,8 @@ public class TargetScanItemProcessor implements ItemProcessor<Target, Target> {
 			socket.close();
 		} catch (SocketTimeoutException ignore) {
 			System.out.println("The port " + curTarget.getPort() + " is closed.");
+		} catch (ConnectException ignore) {
+			System.out.println("The connection was refused on port " + curTarget.getPort());
 		} catch (Throwable error) {
 			System.out.println("An exception was thrown: " + error.getClass() + " with the message " + error.getMessage());
 		}

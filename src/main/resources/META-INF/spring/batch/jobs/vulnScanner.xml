@@ -48,7 +48,7 @@
 			<property name="messagingOperations">
 				<bean class="org.springframework.integration.core.MessagingTemplate">
 					<property name="defaultChannel" ref="outboundRequests"/>
-					<property name="receiveTimeout" value="600000000"/>
+					<property name="receiveTimeout" value="60000000"/>
 				</bean>
 			</property>
 		</bean>
@@ -67,7 +67,7 @@
 
 		<int-amqp:outbound-gateway request-channel="outboundRequests" reply-channel="inboundStaging" amqp-template="amqpTemplate" mapped-request-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS" mapped-reply-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS"/>
 
-		<int:aggregator ref="partitionHandler" send-partial-result-on-expiry="true" send-timeout="10000" input-channel="inboundStaging"/>
+		<int:aggregator ref="partitionHandler" send-partial-result-on-expiry="true" send-timeout="60000000" input-channel="inboundStaging"/>
 
 		<bean id="loadPortsTasklet" class="com.michaelminella.springbatch.tasklet.LoadPortsTasklet" scope="step">
 			<property name="fullPortScan" value="true"/>
@@ -99,11 +99,61 @@
 		    </property>
 		</bean>
 
+	    <bean id="sessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">
+		    <property name="dataSource" ref="dataSource" />
+		    <property name="configLocation">
+		    	<value>classpath:hibernate.cfg.xml</value>
+		    </property>
+		    <property name="configurationClass">
+		    	<value>org.hibernate.cfg.AnnotationConfiguration</value>
+		    </property>
+		    <property name="hibernateProperties">
+		    	<props>
+					<prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
+					<prop key="hibernate.hbm2ddl.auto">update</prop>
+		    	</props>
+		    </property>
+		</bean>
+
 		<task:executor id="taskExecutor" pool-size="3"/>
+
+		<rabbit:template id="amqpTemplate"
+			connection-factory="amqpConnectionFactory"
+			routing-key="vuln.requests"
+			reply-timeout="60000000"
+			reply-queue="vuln.replies">
+			<rabbit:reply-listener/>
+		</rabbit:template>
+
+		<rabbit:queue name="vuln.replies" />
+
+		<rabbit:queue name="vuln.requests" />
+
+		<cloud:rabbit-connection-factory id="amqpConnectionFactory"/>
+
+		<rabbit:admin connection-factory="amqpConnectionFactory"/>
 	</beans>
 
-	<beans profile="master,slave">
-		<int-amqp:inbound-gateway request-channel="inboundRequests" reply-channel="outboundStaging" queue-names="vuln.requests" connection-factory="amqpConnectionFactory" mapped-request-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS" mapped-reply-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS"/>
+	<beans profile="slave">
+	    <bean id="sessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">
+		    <property name="dataSource" ref="dataSource" />
+		    <property name="configLocation">
+		    	<value>classpath:hibernate.cfg.xml</value>
+		    </property>
+		    <property name="configurationClass">
+		    	<value>org.hibernate.cfg.AnnotationConfiguration</value>
+		    </property>
+		    <property name="hibernateProperties">
+		    	<props>
+					<prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
+					<prop key="hibernate.hbm2ddl.auto">validate</prop>
+				</props>
+		    </property>
+		</bean>
+	</beans>
+
+	<beans profile="slave">
+		<int-amqp:inbound-gateway request-channel="inboundRequests" receive-timeout="60000000" reply-channel="outboundStaging" queue-names="vuln.requests" connection-factory="amqpConnectionFactory" mapped-request-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS" mapped-reply-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS"/>
 
 		<int:channel id="inboundRequests"/>
 
@@ -113,7 +163,7 @@
 
 		<step id="scanPorts" xmlns="http://www.springframework.org/schema/batch">
 			<tasklet>
-				<chunk reader="targetItemReader" processor="targetProcessor" writer="targetWriter" commit-interval="10"/>
+				<chunk reader="targetItemReader" processor="targetProcessor" writer="targetWriter" commit-interval="1000"/>
 			</tasklet>
 		</step>
 
@@ -135,22 +185,6 @@
 
 		<bean id="targetProcessor" class="com.michaelminella.springbatch.processor.TargetScanItemProcessor"/>
 
-	    <bean id="sessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">
-		    <property name="dataSource" ref="dataSource" />
-		    <property name="configLocation">
-		    	<value>classpath:hibernate.cfg.xml</value>
-		    </property>
-		    <property name="configurationClass">
-		    	<value>org.hibernate.cfg.AnnotationConfiguration</value>
-		    </property>
-		    <property name="hibernateProperties">
-		    	<props>
-					<prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
-					<prop key="hibernate.hbm2ddl.auto">create</prop>
-		    	</props>
-		    </property>
-		</bean>
-
 		<bean id="stepLocator" class="org.springframework.batch.integration.partition.BeanFactoryStepLocator"/>
 
 		<bean id="stepExecutionRequestHandler" class="org.springframework.batch.integration.partition.StepExecutionRequestHandler">
@@ -164,7 +198,7 @@
 		<rabbit:template id="amqpTemplate"
 			connection-factory="amqpConnectionFactory"
 			routing-key="vuln.requests"
-			reply-timeout="600000000"
+			reply-timeout="60000000"
 			reply-queue="vuln.replies">
 			<rabbit:reply-listener/>
 		</rabbit:template>

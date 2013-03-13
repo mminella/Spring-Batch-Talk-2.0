@@ -2,18 +2,22 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xmlns:cloud="http://schema.cloudfoundry.org/spring"
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans
-		http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/jdbc
+        http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
 		http://schema.cloudfoundry.org/spring
 		http://schema.cloudfoundry.org/spring/cloudfoundry-spring-0.7.xsd">
 
-	<cloud:data-source id="dataSource" />
+	<beans profile="master,slave">
+		<cloud:data-source id="dataSource" />
+	</beans>
 
-	<bean id="placeholderProperties" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
-		<property name="location" value="classpath://batch.properties" />
-		<property name="systemPropertiesModeName" value="SYSTEM_PROPERTIES_MODE_OVERRIDE" />
-		<property name="ignoreUnresolvablePlaceholders" value="true" />
-		<property name="order" value="1" />
-	</bean>
-
+	<beans profile="master">
+		<jdbc:initialize-database data-source="dataSource" enabled="true" ignore-failures="DROPS">
+			<jdbc:script location="${batch.drop.script}"/>
+			<jdbc:script location="${batch.schema.script}"/>
+		</jdbc:initialize-database>
+	</beans>
 </beans>
