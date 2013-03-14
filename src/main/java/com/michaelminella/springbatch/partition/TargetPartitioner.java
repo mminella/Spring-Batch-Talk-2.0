@@ -58,7 +58,6 @@ public class TargetPartitioner implements Partitioner {
 	@Override
 	public Map<String, ExecutionContext> partition(int gridSize) {
 
-		System.out.println("gridSize = " + gridSize);
 		int partitionCount = gridSize * PARTITOINS_PER_NODE;
 		int min = jdbcTemplate.queryForInt("SELECT MIN(" + column + ") from " + table);
 		int max = jdbcTemplate.queryForInt("SELECT MAX(" + column + ") from " + table);

@@ -6,18 +6,19 @@
 	xsi:schemaLocation="http://www.springframework.org/schema/beans
 		http://www.springframework.org/schema/beans/spring-beans.xsd
         http://www.springframework.org/schema/jdbc
-        http://www.springframework.org/schema/jdbc/spring-jdbc.xsd
+        http://www.springframework.org/schema/jdbc/spring-jdbc-3.0.xsd
 		http://schema.cloudfoundry.org/spring
 		http://schema.cloudfoundry.org/spring/cloudfoundry-spring-0.7.xsd">
 
-	<beans profile="master,slave">
-		<cloud:data-source id="dataSource" />
-	</beans>
-
 	<beans profile="master">
-		<jdbc:initialize-database data-source="dataSource" enabled="true" ignore-failures="DROPS">
+		<jdbc:initialize-database data-source="dataSource" ignore-failures="DROPS">
 			<jdbc:script location="${batch.drop.script}"/>
 			<jdbc:script location="${batch.schema.script}"/>
+			<jdbc:script location="${batch.business.schema.script}"/>
 		</jdbc:initialize-database>
+	</beans>
+
+	<beans profile="master,slave">
+		<cloud:data-source id="dataSource" />
 	</beans>
 </beans>

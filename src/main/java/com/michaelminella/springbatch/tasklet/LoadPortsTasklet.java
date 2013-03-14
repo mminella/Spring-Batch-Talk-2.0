@@ -3,20 +3,30 @@ package com.michaelminella.springbatch.tasklet;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.sql.DataSource;
+
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.repeat.RepeatStatus;
-import org.springframework.orm.hibernate3.HibernateTemplate;
+import org.springframework.jdbc.core.JdbcOperations;
+import org.springframework.jdbc.core.JdbcTemplate;
 
-import com.michaelminella.springbatch.domain.Target;
+public class LoadPortsTasklet implements Tasklet {
 
-public class LoadPortsTasklet extends HibernateTemplate implements Tasklet {
-
-	private static final int FULL_PORT_SCAN = 65536;
-	private static final int NUMBER_OF_PORTS = 2048;
+	private static final String INSERT_TARGETS = "INSERT INTO TARGET (ID, IP, PORT, CONNECTED, BANNER) VALUES (?, ?, ?, FALSE, NULL)";
+	private static final String START_ID = "SELECT MAX(ID) FROM TARGET";
+	private int numberOfPorts;
 	private String ipAddress;
-	private boolean fullPortScan;
+	private JdbcOperations template;
+
+	public void setDataSource(DataSource dataSource) {
+		this.template = new JdbcTemplate(dataSource);
+	}
+
+	public void setNumberOfPorts(int ports) {
+		this.numberOfPorts = ports;
+	}
 
 	@Override
 	public RepeatStatus execute(StepContribution arg0, ChunkContext arg1)
@@ -24,27 +34,25 @@ public class LoadPortsTasklet extends HibernateTemplate implements Tasklet {
 
 		System.out.println("**** BUILDING TARGETS FOR " + ipAddress + " ****");
 
-		List<Target> targets = new ArrayList<Target>();
+		List<Object []> targets = new ArrayList<Object []>();
 
-		if(fullPortScan) {
-			for(int i = 1; i < NUMBER_OF_PORTS; i++) {
-				Target target = new Target();
-				target.setIp(ipAddress);
-				target.setPort(i);
-				targets.add(target);
-			}
+		long curMaxId = template.queryForLong(START_ID);
 
-			saveOrUpdateAll(targets);
+		for(int i = 1; i < numberOfPorts; i++) {
+			Object [] params = new Object[3];
+			params[0] = curMaxId + i;
+			params[1] = ipAddress;
+			params[2] = i;
+
+			targets.add(params);
 		}
+
+		template.batchUpdate(INSERT_TARGETS, targets);
 
 		return RepeatStatus.FINISHED;
 	}
 
 	public void setIpAddress(String address) {
 		ipAddress = address;
-	}
-
-	public void setFullPortScan(boolean scan) {
-		fullPortScan = scan;
 	}
 }

@@ -55,8 +55,8 @@
 
 		<bean id="partitioner" class="com.michaelminella.springbatch.partition.TargetPartitioner">
 			<property name="dataSource" ref="dataSource"/>
-			<property name="column" value="id"/>
-			<property name="table" value="target"/>
+			<property name="column" value="ID"/>
+			<property name="table" value="TARGET"/>
 		</bean>
 
 		<int:channel id="outboundRequests">
@@ -70,16 +70,28 @@
 		<int:aggregator ref="partitionHandler" send-partial-result-on-expiry="true" send-timeout="60000000" input-channel="inboundStaging"/>
 
 		<bean id="loadPortsTasklet" class="com.michaelminella.springbatch.tasklet.LoadPortsTasklet" scope="step">
-			<property name="fullPortScan" value="true"/>
+			<property name="numberOfPorts" value="2048"/>
 			<property name="ipAddress" value="#{jobParameters[ipAddress]}"/>
-			<property name="sessionFactory" ref="sessionFactory"/>
+			<property name="dataSource" ref="dataSource"/>
 		</bean>
 
-	    <bean id="exportItemReader"
-	        class="org.springframework.batch.item.database.HibernateCursorItemReader" scope="step">
-			<property name="sessionFactory" ref="sessionFactory"/>
-			<property name="queryString" value="from Target where connected is true"/>
-	    </bean>
+		<bean id="exportItemReader" class="org.springframework.batch.item.database.JdbcPagingItemReader" scope="step">
+			<property name="dataSource" ref="dataSource" />
+			<property name="queryProvider">
+				<bean
+					class="org.springframework.batch.item.database.support.SqlPagingQueryProviderFactoryBean">
+					<property name="dataSource" ref="dataSource" />
+					<property name="selectClause" value="ID, IP, PORT, CONNECTED, BANNER" />
+					<property name="fromClause" value="FROM TARGET" />
+					<property name="whereClause" value="CONNECTED IS TRUE"/>
+					<property name="sortKey" value="PORT" />
+				</bean>
+			</property>
+			<property name="pageSize" value="10" />
+			<property name="rowMapper">
+				<bean class="com.michaelminella.springbatch.domain.TargetRowMapper"/>
+			</property>
+		</bean>
 
 		<bean id="outputFile" class="org.springframework.core.io.FileSystemResource" scope="step">
 			<constructor-arg value="#{jobParameters[outputFile]}"/>
@@ -99,22 +111,6 @@
 		    </property>
 		</bean>
 
-	    <bean id="sessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">
-		    <property name="dataSource" ref="dataSource" />
-		    <property name="configLocation">
-		    	<value>classpath:hibernate.cfg.xml</value>
-		    </property>
-		    <property name="configurationClass">
-		    	<value>org.hibernate.cfg.AnnotationConfiguration</value>
-		    </property>
-		    <property name="hibernateProperties">
-		    	<props>
-					<prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
-					<prop key="hibernate.hbm2ddl.auto">update</prop>
-		    	</props>
-		    </property>
-		</bean>
-
 		<task:executor id="taskExecutor" pool-size="3"/>
 
 		<rabbit:template id="amqpTemplate"
@@ -129,27 +125,10 @@
 
 		<rabbit:queue name="vuln.requests" />
 
+		<!-- rabbit:connection-factory id="amqpConnectionFactory" port="5672" username="guest" password="guest"/ -->
 		<cloud:rabbit-connection-factory id="amqpConnectionFactory"/>
 
 		<rabbit:admin connection-factory="amqpConnectionFactory"/>
-	</beans>
-
-	<beans profile="slave">
-	    <bean id="sessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">
-		    <property name="dataSource" ref="dataSource" />
-		    <property name="configLocation">
-		    	<value>classpath:hibernate.cfg.xml</value>
-		    </property>
-		    <property name="configurationClass">
-		    	<value>org.hibernate.cfg.AnnotationConfiguration</value>
-		    </property>
-		    <property name="hibernateProperties">
-		    	<props>
-					<prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>
-					<prop key="hibernate.hbm2ddl.auto">validate</prop>
-				</props>
-		    </property>
-		</bean>
 	</beans>
 
 	<beans profile="slave">
@@ -163,24 +142,41 @@
 
 		<step id="scanPorts" xmlns="http://www.springframework.org/schema/batch">
 			<tasklet>
-				<chunk reader="targetItemReader" processor="targetProcessor" writer="targetWriter" commit-interval="1000"/>
+				<chunk reader="targetItemReader" processor="targetProcessor" writer="targetWriter" commit-interval="10"/>
 			</tasklet>
 		</step>
 
-	    <bean id="targetItemReader"
-	        class="org.springframework.batch.item.database.HibernateCursorItemReader" scope="step">
-			<property name="sessionFactory" ref="sessionFactory"/>
-			<property name="queryString" value="from Target where id >= :minId and id &lt;= :maxId"/>
+		<bean id="targetItemReader" class="org.springframework.batch.item.database.JdbcPagingItemReader" scope="step">
+			<property name="dataSource" ref="dataSource" />
+			<property name="queryProvider">
+				<bean
+					class="org.springframework.batch.item.database.support.SqlPagingQueryProviderFactoryBean">
+					<property name="dataSource" ref="dataSource" />
+					<property name="selectClause" value="ID, IP, PORT, CONNECTED, BANNER" />
+					<property name="fromClause" value="FROM TARGET" />
+					<property name="whereClause" value="ID >= :minId AND ID &lt;= :maxId"/>
+					<property name="sortKey" value="ID" />
+				</bean>
+			</property>
+			<property name="pageSize" value="10" />
 			<property name="parameterValues">
 				<map>
 					<entry key="minId" value="#{stepExecutionContext[minValue]}"/>
 					<entry key="maxId" value="#{stepExecutionContext[maxValue]}"/>
 				</map>
 			</property>
-	    </bean>
+			<property name="rowMapper">
+				<bean class="com.michaelminella.springbatch.domain.TargetRowMapper"/>
+			</property>
+		</bean>
 
-		<bean id="targetWriter" class="org.springframework.batch.item.database.HibernateItemWriter">
-			<property name="sessionFactory" ref="sessionFactory"/>
+		<bean id="targetWriter" class="org.springframework.batch.item.database.JdbcBatchItemWriter">
+			<property name="assertUpdates" value="true" />
+			<property name="itemSqlParameterSourceProvider">
+				<bean class="org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider" />
+			</property>
+			<property name="sql" value="UPDATE TARGET SET CONNECTED = :connected, BANNER = :banner WHERE ID = :id" />
+			<property name="dataSource" ref="dataSource" />
 		</bean>
 
 		<bean id="targetProcessor" class="com.michaelminella.springbatch.processor.TargetScanItemProcessor"/>
@@ -192,16 +188,8 @@
 			<property name="stepLocator" ref="stepLocator"/>
 		</bean>
 
-		<!-- rabbit:connection-factory id="amqpConnectionFactory" port="5672" username="guest" password="guest"/ -->
+		<!-- rabbit:connection-factory id="amqpConnectionFactory" port="5672" username="guest" password="guest"/-->
 		<cloud:rabbit-connection-factory id="amqpConnectionFactory"/>
-
-		<rabbit:template id="amqpTemplate"
-			connection-factory="amqpConnectionFactory"
-			routing-key="vuln.requests"
-			reply-timeout="60000000"
-			reply-queue="vuln.replies">
-			<rabbit:reply-listener/>
-		</rabbit:template>
 
 		<rabbit:admin connection-factory="amqpConnectionFactory"/>
 
