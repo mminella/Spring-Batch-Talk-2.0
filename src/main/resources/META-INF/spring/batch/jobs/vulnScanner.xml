@@ -70,7 +70,7 @@
 		<int:aggregator ref="partitionHandler" send-partial-result-on-expiry="true" send-timeout="60000000" input-channel="inboundStaging"/>
 
 		<bean id="loadPortsTasklet" class="com.michaelminella.springbatch.tasklet.LoadPortsTasklet" scope="step">
-			<property name="numberOfPorts" value="2048"/>
+			<property name="numberOfPorts" value="65536"/>
 			<property name="ipAddress" value="#{jobParameters[ipAddress]}"/>
 			<property name="dataSource" ref="dataSource"/>
 		</bean>
@@ -119,19 +119,21 @@
 			reply-timeout="60000000"
 			reply-queue="vuln.replies">
 			<rabbit:reply-listener/>
-		</rabbit:template>
+		</rabbit:template><!--
 
 		<rabbit:queue name="vuln.replies" />
 
 		<rabbit:queue name="vuln.requests" />
 
-		<!-- rabbit:connection-factory id="amqpConnectionFactory" port="5672" username="guest" password="guest"/ -->
+		--><!-- rabbit:connection-factory id="amqpConnectionFactory" port="5672" username="guest" password="guest"/ -->
 		<cloud:rabbit-connection-factory id="amqpConnectionFactory"/>
 
 		<rabbit:admin connection-factory="amqpConnectionFactory"/>
+
+		<task:executor id="taskExecutor" pool-size="3"/>
 	</beans>
 
-	<beans profile="slave">
+	<beans profile="master,slave">
 		<int-amqp:inbound-gateway request-channel="inboundRequests" receive-timeout="60000000" reply-channel="outboundStaging" queue-names="vuln.requests" connection-factory="amqpConnectionFactory" mapped-request-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS" mapped-reply-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS"/>
 
 		<int:channel id="inboundRequests"/>

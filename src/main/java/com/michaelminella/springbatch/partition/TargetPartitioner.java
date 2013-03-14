@@ -12,7 +12,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 public class TargetPartitioner implements Partitioner {
 
-	private static final int PARTITOINS_PER_NODE = 1;
+	private static final int PARTITOINS_PER_NODE = 5;
 
 	private JdbcOperations jdbcTemplate;
 
