@@ -111,7 +111,7 @@
 		    </property>
 		</bean>
 
-		<task:executor id="taskExecutor" pool-size="3"/>
+		<task:executor id="taskExecutor" pool-size="20"/>
 
 		<rabbit:template id="amqpTemplate"
 			connection-factory="amqpConnectionFactory"
@@ -129,12 +129,10 @@
 		<cloud:rabbit-connection-factory id="amqpConnectionFactory"/>
 
 		<rabbit:admin connection-factory="amqpConnectionFactory"/>
-
-		<task:executor id="taskExecutor" pool-size="3"/>
 	</beans>
 
 	<beans profile="master,slave">
-		<int-amqp:inbound-gateway request-channel="inboundRequests" receive-timeout="60000000" reply-channel="outboundStaging" queue-names="vuln.requests" connection-factory="amqpConnectionFactory" mapped-request-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS" mapped-reply-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS"/>
+		<int-amqp:inbound-gateway concurrent-consumers="3" request-channel="inboundRequests" receive-timeout="60000000" reply-channel="outboundStaging" queue-names="vuln.requests" connection-factory="amqpConnectionFactory" mapped-request-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS" mapped-reply-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS"/>
 
 		<int:channel id="inboundRequests"/>
 
