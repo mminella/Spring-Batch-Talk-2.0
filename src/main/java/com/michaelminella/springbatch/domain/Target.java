@@ -6,7 +6,7 @@ public class Target {
 	// in a real environment this should be stored as a long
 	private String ip;
 	private int port;
-	private boolean connected;
+	private Boolean connected;
 	private String banner;
 
 	public long getId() {

@@ -34,18 +34,18 @@ vmc push --no-start
 vmc bind-service mysql-js partition
 vmc bind-service rabbitmq-js partition
 
-vmc set-env partition JAVA_OPTS "-Dspring.profiles.active=master -DENVIRONMENT=mysql"
+vmc set-env part JAVA_OPTS "-Dspring.profiles.active=master -DENVIRONMENT=mysql"
 
-vmc start partition
+vmc start part
 
 -- Look at logs
-vmc files partition logs
-vmc files partition tomcat/logs
+vmc files part logs
+vmc files part tomcat/logs
 
-vmc files partition logs/stdout.log >> localstdout.log
+vmc files part logs/stdout.log >> localstdout.log
 
 -- Scale app
-vmc instances partition <number-of-instances>
+vmc instances part <number-of-instances>
 
 -- access database (after installing "gem install caldecott --no-rdoc --no-ri")
 vmc tunnel

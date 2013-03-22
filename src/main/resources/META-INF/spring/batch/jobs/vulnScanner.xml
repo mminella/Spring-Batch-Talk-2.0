@@ -53,7 +53,7 @@
 			</property>
 		</bean>
 
-		<bean id="partitioner" class="com.michaelminella.springbatch.partition.TargetPartitioner">
+		<bean id="partitioner" class="com.michaelminella.springbatch.partition.ColumnRangePartitioner">
 			<property name="dataSource" ref="dataSource"/>
 			<property name="column" value="ID"/>
 			<property name="table" value="TARGET"/>
@@ -154,7 +154,7 @@
 					<property name="dataSource" ref="dataSource" />
 					<property name="selectClause" value="ID, IP, PORT, CONNECTED, BANNER" />
 					<property name="fromClause" value="FROM TARGET" />
-					<property name="whereClause" value="ID >= :minId AND ID &lt;= :maxId"/>
+					<property name="whereClause" value="ID >= :minId AND ID &lt;= :maxId AND CONNECTED IS NULL"/>
 					<property name="sortKey" value="ID" />
 				</bean>
 			</property>
