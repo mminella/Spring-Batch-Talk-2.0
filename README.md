@@ -1,5 +1,25 @@
 Spring-Batch-Talk-2.0
 =====================
+This repo contains the presentation and example code from the Heavy Lifting in the Cloud with Spring Batch talk.  The example code runs a "vuln scanner" which is really nothing more than a port scanner that stores the banners it receives.  Most vulnerability scanners use that banner information to determine if the version of software that replied is vulnerable (based on regexes performed on the banner).
+
+To execute the code, you'll need access to a CloudFoundry installation (CouldFoundry.com is the easiest), VMC installed and Maven 3.  The easiest way to run the sample is via deploying with VMC.
+
+=====================
+Running the example
+=====================
+1. Execute a maven build:
+mvn clean install
+2. Change directories into the target directory.
+3. Select the CloudFoundry target you wish to deploy the application to:
+$ vmc target https://api.cloudfoundry.com
+4. Login to the target you selected
+$ vmc login
+5. Perform a push, however do not allow CloudFoundry to start the app (we need to set the profile first).
+$ vmc push --no-start
+6. From the prompts, enter a name, confirm that it is a Spring application, select that we want a java runtime, 512MB of memory.
+7. The application requires 2 services, Mysql and RabbitMQ
+
+=====================
 Maven
 =====================
 
