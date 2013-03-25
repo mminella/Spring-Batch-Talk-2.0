@@ -32,9 +32,13 @@ mvn clean install
 
     `$ vmc start <APP_NAME>`
 14. Now you'll be able to open a browser and navigate to <APP_NAME>.cloudfoundry.com.
-15. To launch the slave application, repeat steps 5 through 13 with a different application name and activating the slave profile in step 11.
- 
+15. To launch the slave application, repeat steps 5 through 13 with a different application name and activating the slave profile in step 11. 
+16. To scale the slave application, use the instances command where <SLAVE_APP_NAME> is the name of the slave application deployed in step 15 above:
 
+    `$ vmc instances <SLAVE_APP_NAME>`
+17.  When scaling with CloudFoundry via the instances command, the number of instances is the *total* number instances to be running, not the number to increase/decrease by.
+
+<!--
 =====================
 Maven
 =====================
@@ -90,7 +94,7 @@ vmc tunnel
 
 ipAddress=74.54.219.210,outputFile=logs/sr.xml
 
-
+-->
 
 
 
