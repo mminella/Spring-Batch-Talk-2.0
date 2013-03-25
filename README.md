@@ -11,13 +11,29 @@ Running the example
 mvn clean install
 2. Change directories into the target directory.
 3. Select the CloudFoundry target you wish to deploy the application to:
-$ vmc target https://api.cloudfoundry.com
+
+    `$ vmc target https://api.cloudfoundry.com` 
 4. Login to the target you selected
-$ vmc login
+
+    `$ vmc login`
 5. Perform a push, however do not allow CloudFoundry to start the app (we need to set the profile first).
-$ vmc push --no-start
+
+    `$ vmc push --no-start`
 6. From the prompts, enter a name, confirm that it is a Spring application, select that we want a java runtime, 512MB of memory.
 7. The application requires 2 services, Mysql and RabbitMQ
+8. When the wizard promps you to create a service for this application, say yes.
+9. Select mysql from the options and provide a unique name for the service.
+10. Repeate steps 8 and 9 for the RabbitMQ service.
+11. Choose not to save your configuration.
+12. Once the push is complete, you need to indicate that this application will be the master in the master/slave configuration.  To do that, set the spring.profiles.active and ENVIRONMENT JAVA_OPTS with the following command where <APP_NAME> is the applicaiton name you provided in step 6:
+
+    `$ vmc set-env <APP_NAME> JAVA_OPTS "-Dspring.profiles.active=master -DENVIRONMENT=mysql"`
+13. With the application configured, we can start it via:
+
+    `$ vmc start <APP_NAME>`
+14. Now you'll be able to open a browser and navigate to <APP_NAME>.cloudfoundry.com.
+15. To launch the slave application, repeat steps 5 through 13 with a different application name and activating the slave profile in step 11.
+ 
 
 =====================
 Maven
