@@ -26,6 +26,8 @@
 	-->
 
 	<beans profile="master">
+		<!-- The Spring Batch Vulnerability Scanner Job definition and referenced beans -->
+		
 		<job id="vulnScannerJob" xmlns="http://www.springframework.org/schema/batch">
 			<step id="loadPorts" next="masterScanPorts">
 				<tasklet ref="loadPortsTasklet" />
@@ -42,6 +44,18 @@
 			</step>
 		</job>
 
+		<bean id="loadPortsTasklet" class="com.michaelminella.springbatch.tasklet.LoadPortsTasklet" scope="step">
+			<property name="numberOfPorts" value="65536"/>
+			<property name="ipAddress" value="#{jobParameters[ipAddress]}"/>
+			<property name="dataSource" ref="dataSource"/>
+		</bean>
+
+		<bean id="partitioner" class="com.michaelminella.springbatch.partition.ColumnRangePartitioner">
+			<property name="dataSource" ref="dataSource"/>
+			<property name="column" value="ID"/>
+			<property name="table" value="TARGET"/>
+		</bean>
+
 		<bean id="partitionHandler" class="org.springframework.batch.integration.partition.MessageChannelPartitionHandler">
 			<property name="stepName" value="scanPorts"/>
 			<property name="gridSize" value="3"/>
@@ -51,28 +65,6 @@
 					<property name="receiveTimeout" value="60000000"/>
 				</bean>
 			</property>
-		</bean>
-
-		<bean id="partitioner" class="com.michaelminella.springbatch.partition.ColumnRangePartitioner">
-			<property name="dataSource" ref="dataSource"/>
-			<property name="column" value="ID"/>
-			<property name="table" value="TARGET"/>
-		</bean>
-
-		<int:channel id="outboundRequests">
-		    <int:dispatcher task-executor="taskExecutor"/>
-		</int:channel>
-
-		<int:channel id="inboundStaging"/>
-
-		<int-amqp:outbound-gateway request-channel="outboundRequests" reply-channel="inboundStaging" amqp-template="amqpTemplate" mapped-request-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS" mapped-reply-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS"/>
-
-		<int:aggregator ref="partitionHandler" send-partial-result-on-expiry="true" send-timeout="60000000" input-channel="inboundStaging"/>
-
-		<bean id="loadPortsTasklet" class="com.michaelminella.springbatch.tasklet.LoadPortsTasklet" scope="step">
-			<property name="numberOfPorts" value="65536"/>
-			<property name="ipAddress" value="#{jobParameters[ipAddress]}"/>
-			<property name="dataSource" ref="dataSource"/>
 		</bean>
 
 		<bean id="exportItemReader" class="org.springframework.batch.item.database.JdbcPagingItemReader" scope="step">
@@ -111,7 +103,22 @@
 		    </property>
 		</bean>
 
+		<!-- Spring Integration components used for remote partitioning -->
 		<task:executor id="taskExecutor" pool-size="20"/>
+		
+		<int:channel id="outboundRequests">
+		    <int:dispatcher task-executor="taskExecutor"/>
+		</int:channel>
+
+		<int-amqp:outbound-gateway request-channel="outboundRequests" 
+								   reply-channel="inboundStaging" 
+								   amqp-template="amqpTemplate" 
+								   mapped-request-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS" 
+								   mapped-reply-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS"/>
+		
+		<int:channel id="inboundStaging"/>
+
+		<int:aggregator ref="partitionHandler" send-partial-result-on-expiry="true" send-timeout="60000000" input-channel="inboundStaging"/>
 
 		<rabbit:template id="amqpTemplate"
 			connection-factory="amqpConnectionFactory"
@@ -119,26 +126,33 @@
 			reply-timeout="60000000"
 			reply-queue="vuln.replies">
 			<rabbit:reply-listener/>
-		</rabbit:template><!--
+		</rabbit:template>
 
-		<rabbit:queue name="vuln.replies" />
-
-		<rabbit:queue name="vuln.requests" />
-
-		--><!-- rabbit:connection-factory id="amqpConnectionFactory" port="5672" username="guest" password="guest"/ -->
+		<!-- rabbit:connection-factory id="amqpConnectionFactory" port="5672" username="guest" password="guest"/ -->
 		<cloud:rabbit-connection-factory id="amqpConnectionFactory"/>
 
 		<rabbit:admin connection-factory="amqpConnectionFactory"/>
 	</beans>
 
 	<beans profile="master,slave">
+		<rabbit:queue name="vuln.replies" />
+
+		<rabbit:queue name="vuln.requests" />
+		
 		<int-amqp:inbound-gateway concurrent-consumers="3" request-channel="inboundRequests" receive-timeout="60000000" reply-channel="outboundStaging" queue-names="vuln.requests" connection-factory="amqpConnectionFactory" mapped-request-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS" mapped-reply-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS"/>
 
 		<int:channel id="inboundRequests"/>
 
+		<int:service-activator ref="stepExecutionRequestHandler" input-channel="inboundRequests" output-channel="outboundStaging"/>
+
 		<int:channel id="outboundStaging"/>
 
-		<int:service-activator ref="stepExecutionRequestHandler" input-channel="inboundRequests" output-channel="outboundStaging"/>
+		<bean id="stepExecutionRequestHandler" class="org.springframework.batch.integration.partition.StepExecutionRequestHandler">
+			<property name="jobExplorer" ref="jobExplorer"/>
+			<property name="stepLocator" ref="stepLocator"/>
+		</bean>
+
+		<bean id="stepLocator" class="org.springframework.batch.integration.partition.BeanFactoryStepLocator"/>
 
 		<step id="scanPorts" xmlns="http://www.springframework.org/schema/batch">
 			<tasklet>
@@ -170,6 +184,8 @@
 			</property>
 		</bean>
 
+		<bean id="targetProcessor" class="com.michaelminella.springbatch.processor.TargetScanItemProcessor"/>
+
 		<bean id="targetWriter" class="org.springframework.batch.item.database.JdbcBatchItemWriter">
 			<property name="assertUpdates" value="true" />
 			<property name="itemSqlParameterSourceProvider">
@@ -179,22 +195,9 @@
 			<property name="dataSource" ref="dataSource" />
 		</bean>
 
-		<bean id="targetProcessor" class="com.michaelminella.springbatch.processor.TargetScanItemProcessor"/>
-
-		<bean id="stepLocator" class="org.springframework.batch.integration.partition.BeanFactoryStepLocator"/>
-
-		<bean id="stepExecutionRequestHandler" class="org.springframework.batch.integration.partition.StepExecutionRequestHandler">
-			<property name="jobExplorer" ref="jobExplorer"/>
-			<property name="stepLocator" ref="stepLocator"/>
-		</bean>
-
 		<!-- rabbit:connection-factory id="amqpConnectionFactory" port="5672" username="guest" password="guest"/-->
 		<cloud:rabbit-connection-factory id="amqpConnectionFactory"/>
 
 		<rabbit:admin connection-factory="amqpConnectionFactory"/>
-
-		<rabbit:queue name="vuln.replies" />
-
-		<rabbit:queue name="vuln.requests" />
 	</beans>
 </beans>

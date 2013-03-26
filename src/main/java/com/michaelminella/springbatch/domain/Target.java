@@ -1,5 +1,10 @@
 package com.michaelminella.springbatch.domain;
 
+/**
+ * This class represents an IP/port target.
+ * 
+ * @author Michael Minella
+ */
 public class Target {
 
 	private long id;

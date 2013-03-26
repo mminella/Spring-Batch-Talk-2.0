@@ -13,6 +13,12 @@ import org.springframework.batch.item.ItemProcessor;
 
 import com.michaelminella.springbatch.domain.Target;
 
+/**
+ * Takes a {@link Target} instance and scans it, recording if the port is open
+ * and any banner information that is returned.
+ * 
+ * @author Michael Minella
+ */
 public class TargetScanItemProcessor implements ItemProcessor<Target, Target> {
 
 	protected static final Log logger = LogFactory.getLog(TargetScanItemProcessor.class);

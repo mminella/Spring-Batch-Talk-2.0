@@ -5,6 +5,13 @@ import java.sql.SQLException;
 
 import org.springframework.jdbc.core.RowMapper;
 
+/**
+ * A {@link RowMapper} implementation used to map rows from the
+ * Target database table to the {@link Target} class.
+ * 
+ * @author Michael Minella
+ *
+ */
 public class TargetRowMapper implements RowMapper<Target> {
 
 	@Override
