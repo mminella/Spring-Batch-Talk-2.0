@@ -1,8 +1,5 @@
 package com.michaelminella.springbatch.tasklet;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import javax.sql.DataSource;
 
 import org.apache.commons.logging.Log;
@@ -37,8 +34,6 @@ public class LoadPortsTasklet implements Tasklet {
 		logger.debug("About to load targets for ip " + ipAddress);
 		logger.debug("*********************************************");
 
-		List<Object []> targets = new ArrayList<Object []>();
-
 		long curMaxId = template.queryForLong(START_ID);
 
 		// You could have Spring Batch handle this looping by maintaining the
@@ -49,10 +44,8 @@ public class LoadPortsTasklet implements Tasklet {
 			params[1] = ipAddress;
 			params[2] = i;
 
-			targets.add(params);
+			template.update(INSERT_TARGETS, params);
 		}
-
-		template.batchUpdate(INSERT_TARGETS, targets);
 
 		return RepeatStatus.FINISHED;
 	}
