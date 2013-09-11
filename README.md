@@ -1,6 +1,6 @@
 Spring-Batch-Talk-2.0
 =====================
-This repo contains the presentation and example code from the Heavy Lifting in the Cloud with Spring Batch talk.  The example code runs a "vuln scanner" which is really nothing more than a port scanner that stores the banners it receives.  Most vulnerability scanners use that banner information to determine if the version of software that replied is vulnerable (based on regexes performed on the banner).
+This repo contains the presentation and example code from the Heavy Lifting in the Cloud with Spring Batch talk.  You can view a video of the presentation on YouTube here: [Heavy Lifting in the Cloud with Spring Batch](http://www.youtube.com/watch?v=CYTj5YT7CZU). The example code runs a "vuln scanner" which is really nothing more than a port scanner that stores the banners it receives.  Most vulnerability scanners use that banner information to determine if the version of software that replied is vulnerable (based on regexes performed on the banner).
 
 To execute the code, you'll need access to a CloudFoundry installation (CouldFoundry.com is the easiest), VMC installed and Maven 3.  The easiest way to run the sample is via deploying with VMC.
 
@@ -95,13 +95,3 @@ vmc tunnel
 ipAddress=74.54.219.210,outputFile=logs/sr.xml
 
 -->
-
-
-
-
-
-
-
-
-
-
