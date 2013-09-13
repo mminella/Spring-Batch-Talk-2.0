@@ -9,16 +9,15 @@ Running the example
 ===================
 
 1. Execute a maven build:
-~~~
-mvn clean install
-~~~
+
+    `$ mvn clean install`
 2. Select the CloudFoundry target you wish to deploy the application to:
 
     `$ cf target https://api.run.pivotal.io` 
 3. Login to the target you selected
 
     `$ cf login`
-4. Deploy the applications. The `cf` CLI will read the included `manifest.yml` and start both a `master` and `slave` application. 
+4. Deploy the applications. The `cf` CLI will read the included `manifest.yml` and start both a `master` and `slave` application:
 
     `$ cf push`
 14. Now you'll be able to open a browser and navigate to either the `master` or `slave` application. The URL assigned to the each application is displayed in the output from `cf push`.
