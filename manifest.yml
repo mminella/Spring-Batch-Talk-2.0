@@ -1,0 +1,43 @@
+---
+applications:
+- name: spring-batch-sample-master
+  memory: 512M
+  instances: 1
+  host: spring-batch-talk-master-${random-word}
+  domain: cfapps.io
+  path: target/partitioningJobs.war
+  services:
+    scanner-db:
+      label: cleardb
+      provider: cleardb
+      version: n/a
+      plan: spark
+    scanner-queue:
+      label: cloudamqp
+      provider: cloudamqp
+      version: n/a
+      plan: lemur
+  env:
+    SPRING_PROFILES_ACTIVE: master
+    ENVIRONMENT: mysql
+- name: spring-batch-sample-slave
+  memory: 512M
+  instances: 1
+  host: spring-batch-talk-slave-${random-word}
+  domain: cfapps.io
+  path: target/partitioningJobs.war
+  services:
+    scanner-db:
+      label: cleardb
+      provider: cleardb
+      version: n/a
+      plan: spark
+    scanner-queue:
+      label: cloudamqp
+      provider: cloudamqp
+      version: n/a
+      plan: lemur
+  env:
+    SPRING_PROFILES_ACTIVE: slave
+    ENVIRONMENT: mysql
+
