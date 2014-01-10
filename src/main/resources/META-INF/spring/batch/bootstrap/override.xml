@@ -8,7 +8,7 @@
         http://www.springframework.org/schema/jdbc
         http://www.springframework.org/schema/jdbc/spring-jdbc-3.0.xsd
 		http://schema.cloudfoundry.org/spring
-		http://schema.cloudfoundry.org/spring/cloudfoundry-spring-0.7.xsd">
+		http://schema.cloudfoundry.org/spring/cloudfoundry-spring.xsd">
 
 	<beans profile="master">
 		<jdbc:initialize-database data-source="dataSource" ignore-failures="DROPS">
@@ -19,6 +19,6 @@
 	</beans>
 
 	<beans profile="master,slave">
-		<cloud:data-source id="dataSource" />
+		<cloud:data-source id="dataSource"/>
 	</beans>
 </beans>

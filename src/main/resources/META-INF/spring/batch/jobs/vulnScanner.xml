@@ -17,7 +17,7 @@
     				http://www.springframework.org/schema/rabbit
                     http://www.springframework.org/schema/rabbit/spring-rabbit-1.1.xsd
                     http://schema.cloudfoundry.org/spring
-                    http://schema.cloudfoundry.org/spring/cloudfoundry-spring-0.7.xsd
+                    http://schema.cloudfoundry.org/spring/cloudfoundry-spring.xsd
                     http://www.springframework.org/schema/batch
 	                http://www.springframework.org/schema/batch/spring-batch-2.1.xsd">
 
@@ -27,7 +27,7 @@
 
 	<beans profile="master">
 		<!-- The Spring Batch Vulnerability Scanner Job definition and referenced beans -->
-		
+
 		<job id="vulnScannerJob" xmlns="http://www.springframework.org/schema/batch">
 			<step id="loadPorts" next="masterScanPorts">
 				<tasklet ref="loadPortsTasklet" />
@@ -45,7 +45,7 @@
 		</job>
 
 		<bean id="loadPortsTasklet" class="com.michaelminella.springbatch.tasklet.LoadPortsTasklet" scope="step">
-			<property name="numberOfPorts" value="65536"/>
+			<property name="numberOfPorts" value="1024"/>
 			<property name="ipAddress" value="#{jobParameters[ipAddress]}"/>
 			<property name="dataSource" ref="dataSource"/>
 		</bean>
@@ -111,17 +111,17 @@
 
 		<!-- Spring Integration components used for remote partitioning -->
 		<task:executor id="taskExecutor" pool-size="20"/>
-		
+
 		<int:channel id="outboundRequests">
 		    <int:dispatcher task-executor="taskExecutor"/>
 		</int:channel>
 
-		<int-amqp:outbound-gateway request-channel="outboundRequests" 
-								   reply-channel="inboundStaging" 
-								   amqp-template="amqpTemplate" 
-								   mapped-request-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS" 
+		<int-amqp:outbound-gateway request-channel="outboundRequests"
+								   reply-channel="inboundStaging"
+								   amqp-template="amqpTemplate"
+								   mapped-request-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS"
 								   mapped-reply-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS"/>
-		
+
 		<int:channel id="inboundStaging"/>
 
 		<int:aggregator ref="partitionHandler" send-partial-result-on-expiry="true" send-timeout="60000000" input-channel="inboundStaging"/>
@@ -144,7 +144,7 @@
 		<rabbit:queue name="vuln.replies" />
 
 		<rabbit:queue name="vuln.requests" />
-		
+
 		<int-amqp:inbound-gateway concurrent-consumers="3" request-channel="inboundRequests" receive-timeout="60000000" reply-channel="outboundStaging" queue-names="vuln.requests" connection-factory="amqpConnectionFactory" mapped-request-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS" mapped-reply-headers="correlationId, sequenceNumber, sequenceSize, STANDARD_REQUEST_HEADERS"/>
 
 		<int:channel id="inboundRequests"/>

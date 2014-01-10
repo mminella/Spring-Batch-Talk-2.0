@@ -105,23 +105,23 @@
 			<version>1.6.6</version>
 			<scope>runtime</scope>
 		</dependency>
-		<dependency>
+<!-- 		<dependency>
 			<groupId>hsqldb</groupId>
 			<artifactId>hsqldb</artifactId>
 			<version>1.8.0.7</version>
 			<scope>runtime</scope>
 		</dependency>
-        <dependency>
+ -->        <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>5.1.3</version>
         </dependency>
-		<dependency>
+<!-- 		<dependency>
 			<groupId>postgresql</groupId>
 			<artifactId>postgresql</artifactId>
 			<version>9.1-901.jdbc4</version>
 		</dependency>
-		<dependency>
+ -->		<dependency>
 			<groupId>org.freemarker</groupId>
 			<artifactId>freemarker</artifactId>
 			<version>2.3.15</version>
@@ -179,12 +179,12 @@
 		<dependency>
 			<groupId>org.cloudfoundry</groupId>
 			<artifactId>cloudfoundry-runtime</artifactId>
-			<version>0.7.1</version>
+			<version>0.8.5</version>
 		</dependency>
    	</dependencies>
 	<build>
 		<plugins>
-<!-- 			<plugin>
+ 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.0</version>
@@ -193,7 +193,7 @@
 					<target>1.6</target>
 				</configuration>
 			</plugin>
- -->			<plugin>
+			<plugin>
 				<groupId>org.mortbay.jetty</groupId>
 				<artifactId>maven-jetty-plugin</artifactId>
 				<configuration>
@@ -209,7 +209,7 @@
 			</plugin>
 			<plugin>
 				<artifactId>maven-war-plugin</artifactId>
-				<version>2.1-beta-1</version>
+				<version>2.1.1</version>
 				<configuration>
 					<archive>
 						<manifest>
@@ -223,21 +223,32 @@
 			<plugin>
 			    <groupId>org.cloudfoundry</groupId>
 			    <artifactId>cf-maven-plugin</artifactId>
-			    <version>1.0.0.M4</version>
+			    <version>1.0.1</version>
 			    <configuration>
 			    	<server>cloudfoundry</server>
-			      	<target>http://api.cloudfoundry.com</target>
+			      	<target>https://api.run.pivotal.io</target>
+			      	<org>michael-org</org>
+			      	<space>development</space>
+			     	<appname>partitioningJobs</appname>
 			     	<path>${project.build.directory}/partitioningJobs.war</path>
-	              	<memory>512</memory>
-	             	<noStart>true</noStart>
+	              	<memory>1024</memory>
+	              	<url>partitioningJobs.cfapps.io</url>
+	              	<env>
+	              		<SPRING_PROFILES_ACTIVE>master</SPRING_PROFILES_ACTIVE>
+	              		<ENVIRONMENT>mysql</ENVIRONMENT>
+	              	</env>
 		          	<services>
 						<service>
-							<name>mysql-p</name>
-							<vendor>mysql</vendor>
+							<name>cleardb</name>
+							<label>cleardb</label>
+							<version>n/a</version>
+							<plan>spark</plan>
 						</service>
 						<service>
-							<name>rabbitmq-p</name>
-							<vendor>rabbitmq</vendor>
+							<name>cloudamqp</name>
+							<label>cloudamqp</label>
+							<version>n/a</version>
+							<plan>lemur</plan>
 						</service>
 	            	</services>
  			    </configuration>

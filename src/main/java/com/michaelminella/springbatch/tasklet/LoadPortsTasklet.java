@@ -1,5 +1,8 @@
 package com.michaelminella.springbatch.tasklet;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.sql.DataSource;
 
 import org.apache.commons.logging.Log;
@@ -14,7 +17,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 /**
  * This {@link Tasklet} implementation inserts a row into the Target table for
  * each port on the IP address requested.
- * 
+ *
  * @author Michael Minella
  */
 public class LoadPortsTasklet implements Tasklet {
@@ -38,14 +41,18 @@ public class LoadPortsTasklet implements Tasklet {
 
 		// You could have Spring Batch handle this looping by maintaining the
 		// state of the ports saved and returning RepeatStatus.CONTINUABLE
+		List<Object []> paramList = new ArrayList<Object[]>();
+
 		for(int i = 1; i < numberOfPorts; i++) {
 			Object [] params = new Object[3];
 			params[0] = curMaxId + i;
 			params[1] = ipAddress;
 			params[2] = i;
 
-			template.update(INSERT_TARGETS, params);
+			paramList.add(params);
 		}
+
+		template.batchUpdate(INSERT_TARGETS, paramList);
 
 		return RepeatStatus.FINISHED;
 	}
